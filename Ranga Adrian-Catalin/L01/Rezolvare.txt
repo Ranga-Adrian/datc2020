@@ -1,0 +1,2 @@
+In vederea realizarii unui proiect complex din anul 3 am folosit ca aplicatie cloud Google Cloud. Prin intermediul acesteia am realizat baza de date pentru aplicatia noastra si
+am vazut ca puteau fi create mai multe lucruri prin intermediul acestui software insa m-am limitat strict la proiect.
