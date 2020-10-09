@@ -26,8 +26,18 @@ namespace web_api.Controllers
         }
 
         [HttpDelete("{Id}")]
-        public void DeleteStudent([FromRoute] int Id) => StudentRepo.Students.RemoveAt(Id);
-
+        public string DeleteStudent([FromRoute] int Id) 
+        {
+            try{
+                StudentRepo.Students.RemoveAt(Id-1);
+                return "Stergerea a fost efectuata cu succes !";
+            }
+            catch(System.Exception e)
+            {
+                return "S-a produs o eroare !" + e.Message;
+                throw;
+            }
+        }
         [HttpPost]
         public string Post([FromBody]Student student)
         {
@@ -43,14 +53,14 @@ namespace web_api.Controllers
         }
 
         [HttpPut]
-        public string Put(int Id, [FromBody]Student student)
+        public string Put([FromRoute]int Id, [FromBody]Student student)
         {
             try{
-                StudentRepo.Students[Id].Id = student.Id;
-                StudentRepo.Students[Id].Name = student.Name;
-                StudentRepo.Students[Id].Surname = student.Surname;
-                StudentRepo.Students[Id].Faculty = student.Faculty;
-                StudentRepo.Students[Id].StudyYear = student.StudyYear;
+                StudentRepo.Students[Id-1].Id = student.Id;
+                StudentRepo.Students[Id-1].Name = student.Name;
+                StudentRepo.Students[Id-1].Surname = student.Surname;
+                StudentRepo.Students[Id-1].Faculty = student.Faculty;
+                StudentRepo.Students[Id-1].StudyYear = student.StudyYear;
                 return "Modificarea a fost facuta cu succes !";
             }
             catch(System.Exception e)
