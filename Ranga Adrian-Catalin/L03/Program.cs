@@ -13,11 +13,10 @@ namespace L03
     {
         private static DriveService _service;
          private static string _token;
-        private static IEnumerable<string> scopes = null;
 
         static void Main(string[] args)
         {
-            init();
+            Program.init();
         }
         static void init()
         {
@@ -26,8 +25,8 @@ namespace L03
                 DriveService.Scope.Drive,
                  DriveService.Scope.DriveFile
             };
-            var clientID="302057956761-rm4n14jqi0i41cmgrhms875ntj7efajm.apps.googleusercontent.com";
-            var clientSecret="1TeDEbzy3UY59iLYgwOBnQ-H";
+            var clientID="302057956761-32cv4knupjnjj1iuvopcp76e2glqkkm9.apps.googleusercontent.com";
+            var clientSecret="1hXajdrDOJoe2teHQ_z3G0PA";
 
              var credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
                  new ClientSecrets
@@ -35,7 +34,7 @@ namespace L03
                      ClientId=clientID,
                      ClientSecret=clientSecret
                  },
-                 scopes,
+                 scop,
                  Environment.UserName,
                  CancellationToken.None,
                 null
@@ -47,33 +46,11 @@ namespace L03
             });
             _token=credential.Token.AccessToken;
             Console.Write("Token:" + credential.Token.AccessToken);
-            GetMyFiles();
+        
                  
         }
 
-        static void GetMyFiles()
-        {
-            var request = (HttpWebRequest)WebRequest.Create("http://www.googleapis.com/drive/v3/files?q='root'%20in%20parents");
-            request.Headers.Add(HttpRequestHeader.Authorization, "Bearer" + _token);
-
-            using (var response = request.GetResponse())
-            {
-            
-                using (Stream data = request.GetRequestStream())
-                using (var reader = new StreamReader(data))
-                {
-                    string text = reader.ReadToEnd();
-                    var myData = JObject.Parse(text);
-                    foreach (var file in myData["files"])
-                    {
-                        if (file["mineType"].ToString() != "application/vnd.google-apps.folder")
-                        {
-                            Console.WriteLine("File name: " + file["name"]);
-                        }
-                    }
-                }
-            }
-        }
+      
 
     }
 }
