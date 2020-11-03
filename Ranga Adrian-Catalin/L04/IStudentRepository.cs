@@ -7,5 +7,9 @@ public interface IStudentRepository {
 
     Task CreateStudent(StudentEntity student);
 
+    Task Update(string partitionKey, string rowKey, StudentEntity student);
+
+    Task Delete(string partitionKey, string rowKey);
+
     
 }

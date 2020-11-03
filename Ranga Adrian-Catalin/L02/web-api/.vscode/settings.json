@@ -1,4 +1,3 @@
 {
-    "appService.defaultWebAppToDeploy": "/subscriptions/b561135a-13f0-45c7-80d4-8dc88825bb64/resourceGroups/appsvc_windows_centralus/providers/Microsoft.Web/sites/rangaadrian-datc2020-l02",
     "appService.deploySubpath": "publish"
 }

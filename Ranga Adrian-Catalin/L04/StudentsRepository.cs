@@ -46,6 +46,25 @@ namespace webapi_storage {
             return students;
         }
 
+         public async Task Update(string partitionKey, string rowKey, StudentEntity student)
+        {
+            student.PartitionKey=partitionKey;
+            student.RowKey=rowKey;
+            student.ETag="*";
+            TableOperation update = TableOperation.Replace(student);
+            await _studentsTable.ExecuteAsync(update);
+        }
+
+        public async Task Delete(string partitionKey, string rowKey)
+        {
+            TableOperation retrieve =TableOperation.Retrieve<StudentEntity>(partitionKey, rowKey);
+            TableResult result=await _studentsTable.ExecuteAsync(retrieve);
+
+            StudentEntity deleteStudent=(StudentEntity)result.Result;
+            TableOperation delete=TableOperation.Delete(deleteStudent);
+            await _studentsTable.ExecuteAsync(delete);
+        }
+
         private async Task InitializeTable() 
         {
             var account = CloudStorageAccount.Parse(_connectionString);

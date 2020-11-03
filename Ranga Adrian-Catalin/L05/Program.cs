@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using Model;
+using Models;
 
 namespace L05
 {
@@ -13,21 +15,17 @@ namespace L05
 
         private static CloudTable _studentsTable;
 
-        private static TableOperation tableOperation;
-	    private static TableResult tableResult;
+        private static CloudTable universityMetrics;
+        private static CloudTableClient tableMetrics;
 
         private static List<StudentEntity> students  = new List<StudentEntity>();
+		private static List<Statistics> metrics  = new List<Statistics>();
+		public static int previousTotal = 0;
         static void Main(string[] args)
         {
             Task.Run(async() => { await InitializeTable(); })
             .GetAwaiter()
             .GetResult();
-        }
-        public async Task CreateStudent(StudentEntity student)
-        {
-            var insertOperation = TableOperation.Insert(student);
-
-            await _studentsTable.ExecuteAsync(insertOperation);
         }
 
         static async Task InitializeTable() 
@@ -43,111 +41,10 @@ namespace L05
 
             await _studentsTable.CreateIfNotExistsAsync();
 
-            int option = -1;
-	            do
-	            {
-	                System.Console.WriteLine("1.Adauga un student.");
-	                System.Console.WriteLine("2.Sterge un student.");
-	                System.Console.WriteLine("3.Afisare studenti.");
-	                System.Console.WriteLine("4.Iesire");
-	                System.Console.WriteLine("Alegeti optiunea: ");
-	                string opt = System.Console.ReadLine();
-	                option =Int32.Parse(opt);
-	                switch(option)
-	                {
-	                    case 1:
-	                        await AddNewStudent();
-	                        break;
-	                    case 2:
-	                        await DeleteStudent();
-	                        break;
-	                    case 3:
-	                        await DisplayStudents();
-	                        break;
-	                    case 4:
-	                        System.Console.WriteLine("La revedere :)");
-	                        break;
-	                }
-	            }while(option != 4);
+           	await DisplayStudents(_connectionString);
         }
 
-        private static async Task<StudentEntity> RetrieveRecordAsync(CloudTable table,string partitionKey,string rowKey)
-	        {
-	            tableOperation = TableOperation.Retrieve<StudentEntity>(partitionKey, rowKey);
-	            tableResult = await table.ExecuteAsync(tableOperation);
-	            return tableResult.Result as StudentEntity;
-	        }
-
-        private static async Task AddNewStudent(){
-            
-             System.Console.WriteLine("Add the Universitatea:");
-	            string university = Console.ReadLine();
-	            System.Console.WriteLine("Add the CNP:");
-	            string cnp = Console.ReadLine();
-	            System.Console.WriteLine("Add the first name:");
-	            string firstName = Console.ReadLine();
-	            System.Console.WriteLine("Add the last name:");
-	            string lastName = Console.ReadLine();
-	            System.Console.WriteLine("Add the faculty:");
-	            string faculty = Console.ReadLine();
-	            System.Console.WriteLine("Add the year of study:");
-	            string year = Console.ReadLine();
-	
-	            StudentEntity stud = await RetrieveRecordAsync(_studentsTable, university, cnp);
-	            if(stud == null)
-	            {
-	                var student = new StudentEntity(university,cnp);
-	                student.FirstName = firstName;
-	                student.LastName = lastName;
-	                student.Faculty = faculty;
-	                student.Year = Convert.ToInt32(year);
-	                var insertOperation = TableOperation.Insert(student);
-	                await _studentsTable.ExecuteAsync(insertOperation);
-	                System.Console.WriteLine("This student has been inserted !");
-	            }
-	            else
-	            {
-	                System.Console.WriteLine("This student exists already !");
-	            }
-        }
-
-        private static async Task EditStudent(){
-            
-            var student = new StudentEntity("UPT", "1970213137244");
-            student.FirstName = "Marian";
-            student.LastName = "Cojocaru";
-            student.Email = "mail@student.uvt.ro";
-            student.Year = 2;
-            student.ETag = "*";
-
-            var editOperation = TableOperation.Merge(student);
-
-            await _studentsTable.ExecuteAsync(editOperation);
-        }
-
-        private static async Task DeleteStudent()
-	        {
-	            System.Console.WriteLine("Introduce the University:");
-	            string university = Console.ReadLine();
-	            System.Console.WriteLine("Introduce CNP:");
-	            string cnp = Console.ReadLine();
-	
-	            StudentEntity stud = await RetrieveRecordAsync(_studentsTable, university, cnp);
-	            if(stud != null)
-	            {
-	                var student = new StudentEntity(university,cnp);
-	                student.ETag = "*";
-	                var deleteOperation = TableOperation.Delete(student);
-	                await _studentsTable.ExecuteAsync(deleteOperation);
-	                System.Console.WriteLine("The students has been deleted!");
-	            }
-	            else
-	            {
-	                System.Console.WriteLine("The student does not exist !");
-	            }
-	        }
-
-        private async Task<List<StudentEntity>> GetAllStudents()
+		private static async Task<List<StudentEntity>> GetAllStudents()
         {
             var students = new List<StudentEntity>();
 
@@ -165,21 +62,90 @@ namespace L05
             return students;
         }
 
-	        private static async Task DisplayStudents()
+		private static async Task<List<Statistics>> GetAllMetrics()
+        {
+            TableQuery<Statistics> tableQuery = new TableQuery<Statistics>();
+            TableContinuationToken token = null;
+            do
+            {
+                TableQuerySegment<Statistics> result = await universityMetrics.ExecuteQuerySegmentedAsync(tableQuery,token);
+                token = result.ContinuationToken;
+                metrics.AddRange(result.Results);
+            }while(token != null);
+
+            return metrics;
+        }
+
+
+	        private static async Task DisplayStudents(string _connectionString)
 	        {
 	            await GetAllStudents();
 	
-	            foreach(StudentEntity std in students)
-	            {
-					Console.WriteLine("First name : {0}", std.FirstName);
-					Console.WriteLine("Last name : {0}", std.LastName);
-	                Console.WriteLine("Faculty : {0}", std.Faculty);
-	                Console.WriteLine("Year : {0}", std.Year);
-	                Console.WriteLine("\n");
-	            }
-	            students.Clear();
+	        	var accountMetrics = CloudStorageAccount.Parse(_connectionString);
+            	tableMetrics = accountMetrics.CreateCloudTableClient();
+
+            	universityMetrics = tableMetrics.GetTableReference("TableMetrics");
+            	await universityMetrics.CreateIfNotExistsAsync();
+            	await GetAllMetrics();
+            	List<int> totalStudents  = new List<int>();
+            	int UptCounter = 0;
+            	int UvtCounter = 0;
+                int EtcCounter = 0;
+                int CtiCounter = 0;
+            	foreach(StudentEntity std in students)
+            	{
+                	if(std.PartitionKey == "UPT")
+                    	UptCounter++;
+                	else if(std.PartitionKey == "ETC")
+                    	    EtcCounter++;
+                    else if(std.PartitionKey == "CTI")
+                    	    CtiCounter++;
+                    else
+                        UvtCounter++;
+            	}
+				foreach(Statistics stat in metrics)
+				{
+					totalStudents.Add(stat.TotalNrOfStudents);
+				}
+
+				int total = UptCounter + UvtCounter + EtcCounter + CtiCounter;
+            	previousTotal = Convert.ToInt32(totalStudents.Max());
+            
+				if(total != previousTotal)
+				{
+					var timeSpan1 = DateTime.Now.ToString("o");
+					Statistics stat1 = new Statistics("UPT",timeSpan1);
+					stat1.TotalNrOfStudents = UptCounter;
+					var insertOperation1 = TableOperation.Insert(stat1);
+					await universityMetrics.ExecuteAsync(insertOperation1);
+
+					var timeSpan2 = DateTime.Now.ToString("o");
+					Statistics stat2 = new Statistics("UVT",timeSpan2);
+					stat2.TotalNrOfStudents = UvtCounter;
+					var insertOperation2 = TableOperation.Insert(stat2);
+					await universityMetrics.ExecuteAsync(insertOperation2);
+
+                    var timeSpan3 = DateTime.Now.ToString("o");
+					Statistics stat3 = new Statistics("ETC",timeSpan3);
+					stat3.TotalNrOfStudents = EtcCounter;
+					var insertOperation3 = TableOperation.Insert(stat3);
+					await universityMetrics.ExecuteAsync(insertOperation3);
+
+                    var timeSpan4 = DateTime.Now.ToString("o");
+					Statistics stat4 = new Statistics("CTI",timeSpan4);
+					stat4.TotalNrOfStudents = CtiCounter;
+					var insertOperation4 = TableOperation.Insert(stat4);
+					await universityMetrics.ExecuteAsync(insertOperation4);
+					
+					var timeSpan5 = DateTime.Now.ToString("o");
+					Statistics stat5 = new Statistics("Total",timeSpan5);
+					stat5.TotalNrOfStudents = total;
+					var insertOperation5 = TableOperation.Insert(stat5);
+					await universityMetrics.ExecuteAsync(insertOperation5);
+					
+				students.Clear();
 	            
-	        }
+	       		}
 	    }
     }
 }

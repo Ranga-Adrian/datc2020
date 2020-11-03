@@ -41,5 +41,36 @@ namespace L04.Controllers
             }
 
         }
+
+        [HttpPut("{partitionKey}/{rowKey}")]
+        public async Task <string> Update([FromRoute]string partitionKey, [FromRoute]string rowKey, [FromRoute]StudentEntity student)
+        {
+            try{
+                await _studentRepository.Update(partitionKey,rowKey,student);
+                return "Modificarea a fost facuta cu succes !";
+            }
+            catch(System.Exception e)
+            {
+                return "S-a produs o eroare !" + e.Message;
+                throw;
+            }
+        }
+
+        [HttpDelete("{partitionKey}/{rowKey}")]
+        public async Task<string> Delete([FromRoute] string partitionKey, [FromRoute] string rowKey)
+        {
+            try
+            {
+                await _studentRepository.Delete(partitionKey, rowKey);
+                return "Stergerea a fost efectuata cu succes !";
+            }
+            catch(System.Exception e)
+            {
+                return "S-a produs o eroare " + e.Message;
+                throw;
+            }
+
+                
+        }
     }
 }
